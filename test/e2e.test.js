@@ -155,28 +155,48 @@ test("e2e: init writes a valid config in a temp dir", async () => {
   assert.equal(cfg.linkage, "unknown");
 });
 
-test("e2e: scan on this machine finds the real libgpgme 1.18.0 (AT-RISK)", async () => {
+test("e2e: scan on this machine finds the real installed GPGME", async () => {
   const r = await cli(["scan", "--json"]);
-  assert.equal(r.code, 1);
   const data = JSON.parse(r.stdout);
-  assert.equal(data.engineVersion, "2.4.4");
-  assert.equal(data.ghostscriptVersion, null);
-  const install = data.installs.find((i) => i.version === "1.18.0-4.1ubuntu4");
-  assert.ok(install, "expected the real dpkg version in the scan");
-  assert.equal(install.verdict, "AT-RISK");
-  assert.ok(
-    install.sources.some((s) => s.source.startsWith("dpkg")),
-    "expected a dpkg source",
+  // Host-agnostic: the runner image differs from this sandbox
+  // (Ubuntu 26.04 / gpg 2.4.8 / libgpgme 2.0.1 vs Ubuntu 24.04 /
+  // gpg 2.4.4 / libgpgme 1.18.0 here), so assert structure and the
+  // engine-vs-library separation, not exact numbers. The exact
+  // values for THIS machine are recorded in examples/*-2026-11-22.txt.
+  assert.ok(data.installs.length >= 1, "expected at least one install");
+  const install = data.installs[0];
+  assert.match(install.version, /^\d+\.\d+\.\d+/);
+  assert.match(data.engineVersion, /^\d+\.\d+\.\d+/);
+  assert.notEqual(
+    install.version,
+    data.engineVersion,
+    "the library version must not be the engine version",
   );
+  assert.ok(install.sources.length > 0, "expected at least one version source");
   assert.ok(install.sonamePaths.length > 0, "expected soname paths on disk");
+  assert.ok(
+    ["EXPOSED", "AT-RISK", "SAFE", "UNKNOWN"].includes(install.verdict),
+  );
+  // Exit code must follow the worst verdict.
+  const expectedCode =
+    data.worst === "SAFE" ? 0 : data.worst === "UNKNOWN" ? 2 : 1;
+  assert.equal(r.code, expectedCode);
+  // On an Ubuntu host with an affected version the verdict is AT-RISK
+  // (no Ubuntu fix published yet as of 2026-11-21).
+  const core = install.version.split(/[-+]/)[0].split(".").map(Number);
+  const belowFixed =
+    core[0] < 2 ||
+    (core[0] === 2 && (core[1] < 3 || (core[1] === 3 && core[2] < 1)));
+  if (data.distroHint === "ubuntu" && belowFixed) {
+    assert.equal(install.verdict, "AT-RISK");
+  }
 });
 
 test("e2e: scan human output names the engine version separately", async () => {
   const r = await cli(["scan"]);
-  assert.equal(r.code, 1);
-  assert.match(r.stdout, /engine: gpg 2\.4\.4/);
-  assert.match(r.stdout, /AT-RISK/);
-  assert.match(r.stdout, /ghostscript: not installed/);
+  assert.match(r.stdout, /engine: gpg \d+\.\d+\.\d+ \(the ENGINE version/);
+  assert.match(r.stdout, /verdict: (EXPOSED|AT-RISK|SAFE|UNKNOWN)/);
+  assert.match(r.stdout, /ghostscript: (not installed|\d)/);
   assert.match(r.stdout, /Exposure conditions only/);
 });
 
