@@ -1,0 +1,2 @@
+	libgpgmepp.so.6 (libc6,x86-64) => /lib/x86_64-linux-gnu/libgpgmepp.so.6
+	libgpgme.so.11 (libc6,x86-64) => /lib/x86_64-linux-gnu/libgpgme.so.11

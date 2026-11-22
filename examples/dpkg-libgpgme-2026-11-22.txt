@@ -1,0 +1,9 @@
+Desired=Unknown/Install/Remove/Purge/Hold
+| Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
+|/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)
+||/ Name                 Version           Architecture Description
++++-====================-=================-============-=================================
+un  libgpgme11           <none>            <none>       (no description available)
+ii  libgpgme11t64:amd64  1.18.0-4.1ubuntu4 amd64        GPGME - GnuPG Made Easy (library)
+un  libgpgmepp6          <none>            <none>       (no description available)
+ii  libgpgmepp6t64:amd64 1.18.0-4.1ubuntu4 amd64        C++ wrapper library for GPGME

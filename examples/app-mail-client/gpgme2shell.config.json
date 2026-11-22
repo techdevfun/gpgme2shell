@@ -1,0 +1,10 @@
+{
+  "tool": "gpgme2shell",
+  "version": "0.1.0",
+  "checkedAt": "2026-11-22",
+  "scanDirs": [],
+  "appDir": ".",
+  "exposure": "untrusted",
+  "linkage": "shared",
+  "notes": "Representative fixture: a mail client that verifies signed mail from untrusted senders."
+}

@@ -1,0 +1,4 @@
+Package gpgme was not found in the pkg-config search path.
+Perhaps you should add the directory containing `gpgme.pc'
+to the PKG_CONFIG_PATH environment variable
+Package 'gpgme', required by 'virtual:world', not found

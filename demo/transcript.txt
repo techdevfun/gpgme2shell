@@ -1,0 +1,95 @@
+# gpgme2shell demo - real CLI output
+# (step 1 is a LIVE scan of this machine, 22/11/2026:
+#  Ubuntu 24.04, libgpgme 1.18.0-4.1ubuntu4, gpg engine
+#  2.4.4, no gpgme.pc, no gs; the mail client in step 4 is
+#  a representative fixture from examples/app-mail-client)
+
+$ gpgme2shell scan
+gpgme2shell 0.1.0 - scan (checked 2026-11-22, CVE-2026-129975)
+engine: gpg 2.4.4 (the ENGINE version - never the library version)
+os: ubuntu 24.04
+
+install 1: 1.18.0-4.1ubuntu4
+  source: dpkg libgpgme11t64:amd64 -> 1.18.0-4.1ubuntu4
+  source: dpkg libgpgmepp6t64:amd64 -> 1.18.0-4.1ubuntu4
+  library: /lib/x86_64-linux-gnu/libgpgmepp.so.6
+  library: /lib/x86_64-linux-gnu/libgpgme.so.11
+  library: /usr/lib/x86_64-linux-gnu/libgpgme.so.11
+  library: /usr/lib/x86_64-linux-gnu/libgpgme.so.11.27.0
+  library: /lib/x86_64-linux-gnu/libgpgme.so.11.27.0
+  verdict: AT-RISK (version 1.18.0-4.1ubuntu4, linkage shared, exposure unknown)
+  - Ubuntu (all releases) has no published fix for CVE-2026-129975 yet (no CVE page and no security notice yet (2026-11-21))
+  deciding: Ubuntu (all releases) has no published fix yet
+
+summary: EXPOSED 0, AT-RISK 1, SAFE 0, UNKNOWN 0 - 1 install(s) checked
+ghostscript: not installed (secondary signal - see explain ghostscript)
+
+Exposure conditions only. This tool does not prove exploitability and never sends a crafted key. A SAFE verdict means these three conditions do not line up - not that the host is safe from every GPGME flaw.
+exit: 1
+
+$ gpgme2shell check 1.18.0-4.1ubuntu4 --distro ubuntu
+check: 1.18.0-4.1ubuntu4 (version string)
+verdict: AT-RISK (version 1.18.0-4.1ubuntu4, linkage shared, exposure unknown)
+  - Ubuntu (all releases) has no published fix for CVE-2026-129975 yet (no CVE page and no security notice yet (2026-11-21))
+  deciding: Ubuntu (all releases) has no published fix yet
+
+Exposure conditions only. This tool does not prove exploitability and never sends a crafted key. A SAFE verdict means these three conditions do not line up - not that the host is safe from every GPGME flaw.
+exit: 1
+
+$ gpgme2shell check 2.3.1
+check: 2.3.1 (version string)
+verdict: SAFE (version 2.3.1, linkage shared, exposure unknown)
+  - 2.3.1 is at or above the upstream fixed build 2.3.1
+  deciding: fixed upstream build 2.3.1
+
+Exposure conditions only. This tool does not prove exploitability and never sends a crafted key. A SAFE verdict means these three conditions do not line up - not that the host is safe from every GPGME flaw.
+
+$ gpgme2shell config-scan examples/app-mail-client
+gpgme2shell 0.1.0 - config-scan /home/hatch/workspace/github-repo-factory/gpgme2shell-build/examples/app-mail-client (checked 2026-11-22)
+linked apps: 1
+  - ldd.txt: ldd.txt: libgpgme.so.11 => /lib/x86_64-linux-gnu/libgpgme.so.11 (0x00007f1234567000)
+exposure: untrusted (gpgme2shell.config.json)
+linkage: shared (gpgme2shell.config.json)
+notes: Representative fixture: a mail client that verifies signed mail from untrusted senders.
+verdict: EXPOSED
+
+Exposure conditions only. This tool does not prove exploitability and never sends a crafted key. A SAFE verdict means these three conditions do not line up - not that the host is safe from every GPGME flaw.
+exit: 1
+
+$ gpgme2shell playbook
+gpgme2shell playbook - first hour after CVE-2026-129975
+Checked 2026-11-22. Sources: GnuPG advisory 2026-11-20, Debian DSA-6646-1 / DLA-4924-1, Alpine security tracker.
+
+1. Upgrade the shared library
+  Update GPGME to 2.3.1 (upstream, released 2026-11-19) or 1.24.4 on the legacy 1.x line. Debian: DSA-6646-1 trixie 1.24.2-3+deb13u1, DLA-4924-1 bookworm 1.18.0-3+deb12u1. Alpine 3.24: gpgme-2.3.1-r0. Ubuntu: no fix published yet as of 2026-11-21 - watch the Ubuntu CVE tracker. Windows: Gpg4win 5.1.2 bundles the fixed library.
+
+2. Rebuild static copies
+  A package update cannot fix a statically linked GPGME. Rebuild every statically linked binary against GPGME 2.3.1 and redeploy it. If a vendor ships the binary, ask the vendor for a rebuild and treat the copy as AT-RISK until the rebuild lands.
+
+3. Restart every app that loaded the old library
+  The fix only takes effect when the app loads the new library. Restart mail clients, XMPP clients, Samba, Flatpak apps, and any service that links GPGME. A running process keeps the old code in memory until it restarts.
+
+4. Verify on each host
+  Re-run `gpgme2shell scan` and confirm the verdict is SAFE with the fixed build named. Check the version from the package manager AND the library on disk - pkg-config alone can miss a copy when no .pc file ships. Do not read `gpg --version` as the library version: it reports the gpg engine, not GPGME.
+
+5. Do not test with a crafted key
+  Never feed a crafted OpenPGP key with a very long user ID at a live app to 'see if it crashes'. The trigger is described in the public advisory; reproducing it is not a check. Never run exploit code from untrusted repos.
+
+What NOT to do:
+  - Do not feed a crafted key at a live app - the advisory describes the trigger, reproducing it is not a check.
+  - Do not run exploit code from untrusted repos.
+  - Do not read `gpg --version` as the library version - it is the engine version.
+  - Do not call a host safe because one package query says so - check the library on disk and every linked app.
+
+Secondary signal, not a verdict: Ghostscript before 10.08.0 has a -dSAFER bypass (CVE-2026-125396, CVSS 4.0 8.5, VulnCheck). Fixed upstream in 10.08.0 (2026-09-08); Debian DLA-4914-1 bookworm 10.0.0~dfsg-11+deb12u9, DSA-6516-1 trixie 10.05.1~dfsg-1+deb13u2; Ubuntu USN-8949-1 (2026-10-21). Update Ghostscript the same way and rebuild container images that bundle it.
+
+Exposure conditions only. This tool does not prove exploitability and never sends a crafted key. A SAFE verdict means these three conditions do not line up - not that the host is safe from every GPGME flaw.
+
+# The legacy line has its own fix
+$ gpgme2shell check 1.24.4
+check: 1.24.4 (version string)
+verdict: SAFE (version 1.24.4, linkage shared, exposure unknown)
+  - 1.24.4 is at or above the upstream fixed build 1.24.4
+  deciding: fixed upstream build 1.24.4
+
+Exposure conditions only. This tool does not prove exploitability and never sends a crafted key. A SAFE verdict means these three conditions do not line up - not that the host is safe from every GPGME flaw.
